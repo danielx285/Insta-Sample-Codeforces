@@ -3,72 +3,119 @@
 
 import requests
 from bs4 import BeautifulSoup
+from os import system, path
+
 import argparse
 import lxml
-import subprocess
+import commands
 import sys
 
-parser = argparse.ArgumentParser(description='Executa seu arquivo python ou cpp testando os samples do codeforces')
+parser = argparse.ArgumentParser(description='Executa seu arquivo executável ou .py testando os samples do codeforces')
 parser.add_argument('mode', type=str, help='Modo de execução podendo ser:\n C(Contest)\nG(Gym)\nN(Execução Normal)\nGN(Problemas de Gym)')
-parser.add_argument('code', type=str, help='Código do contest pode ser encontrado facilmente na barra de endereços')
-parser.add_argument('file_arg', type=str, help='Nome do arquivo podendo ter a extensão .py ou ponto .cpp')
+parser.add_argument('code', type=str, help='Código do contest pode ser encontrado facilmente na barra de endereços do codeforces')
+parser.add_argument('file_arg', type=str, help='Nome do arquivo podendo ter a extensão .py ou ser um executável qualquer já compilado')
 args = parser.parse_args()
 
-if "__name__" == "__main__":
+if __name__ == "__main__":
+	#O uso do getoutput é pra evitar o runtime caso eu crie um cache mas o diretório já existe
+	commands.getoutput('mkdir cache')
+	
 	try :
 		#Pegando argumentos
-		mode = args.mode
-		file_arg, ext = args.file_arg.split(".")
+		mode = args.mode.lower()
+		file_arg = args.file_arg.split(".")
 		code = args.code
+		file_arg[0].upper()
 
 	except :
 		print "Argumentos invalidos ou não reconhecidos"
 		print "Digite: insta {modo de execução} {Nome_do_arquivo.extensão} {Código do contest}"
 		exit()
-
+	
+	'''
+	A requisição será feita por meio do endereço em formato string. Sendo assim criarei primeiro a
+ 	a string requisição e depois verei se a mesma é valida...
+	'''
 	#Se o usuario entrar em modo contestante
 	if mode == "c":
 		#Exemplo de endereço
 		#https://codeforces.com/contest/102323/problem/A
-		r = requests.get("http://codeforces.com/contest/%s/problem/%s" %( code, file_arg))
+		requisicao = ("https://codeforces.com/contest/%s/problem/%s" %( code, file_arg[0]))
 	
 	#Se o usuario entrar em modo for gym
 	elif mode == "g":
 		# Exemplo de endereço
 		# https://codeforces.com/gym/102323/problem/A
-		r = requests.get("http://codeforces.com/gym/%s/E" % code)
+		requisicao = ("https://codeforces.com/gym/%s/%s" % (code, file_arg[0]))
 	
 	#Se o usuario entrar em modo normal
 	elif mode == "n":
 		# Exemplo de endereço
 		# https://codeforces.com/problemset/problem/1214/C
-		r = requests.get("http://codeforces.com/problemset/problem/%s/%s" % (code, file_arg))
+		requisicao = ("https://codeforces.com/problemset/problem/%s/%s" % (code, file_arg[0]))
 	
 	#Se o usuario entrar em modo para problemas de gym
 	elif mode == "gn":
 		# Exemplo de endereço
 		# https://codeforces.com/gym/102323/problem/A
-		r = requests.get("http://codeforces.com/gym/%s/problem/%s" % (code, file_arg))
+		requisicao = ("https://codeforces.com/gym/%s/problem/%s" % (code, file_arg[0]))
 	
 	else:
 		print "Argumentos invalidos ou não reconhecidos"
-		print "Digite: insta {modo de execução} {Nome_do_arquivo.extensão} {Código do contest}"
+		print "Digite: insta {modo de execução} {Nome_do_arquivo} {Código do contest}"
 		exit()
 
-	search = BeautifulSoup(r.content, 'lxml')
+    #Tratando códigos de contests errados ou questões inexistentes...
+	try :
+		request = requests.get(requisicao)
+	except :
+			
+		print "Argumentos invalidos"
+		print "Certifique-se de que o código do contest foi inserido corretamente e na ordem correta"
+		print "Certifique-se também se há uma questão com o identificada pelo nome do seu arquivo de código"
+		print "Certifique-se de que o site do codeforces n está congestionado..."
+		exit()
+
+	if len(file_arg) > 2 or (len(file_arg) == 2 and file_arg[1] != 'py'):
+		print "Extensões de arquivos suportados: .py ou executável sem extensão já compilado"
+		exit()
+
+	search = BeautifulSoup(request.content, 'lxml')
 	statments = [ str(ans).replace("<br/>", "\n").strip("<pre>").strip("</pre>").strip() for ans in search.find_all("pre")]
 
-	in_out = {}
-
+	in_out = []
+	
 	for s in xrange(0, len(statments), 2):
-		in_out[statments[s]] = statments[s+1]
+		in_out.append((statments[s], statments[s+1]))
+			
+	test_case = 1
+	
+	save_path = '%s/cache' % (commands.getoutput('pwd'))
 
-	for k in in_out:
+	for case in xrange(len(in_out)):
+
+		input_id = '%s%d.txt' % (file_arg[0], test_case)
+		complete_path_in = path.join(save_path, input_id)
+		input_file = open(complete_path_in, 'w')
+		input_file.write(in_out[case][0])
+		input_file.close()
 		print "Input: "
-		print k
-
+		print in_out[case][0]
+		
+		output_id = '%s%d_correct_out.txt' % (file_arg[0], test_case)
+		complete_path_out = path.join(save_path, output_id)
+		output_file = open(complete_path_out, 'w')
+		output_file.write(in_out[case][1])
+		output_file.close()
 		print "Output: "
-		print in_out[k]
+		print in_out[case][1]
+
+		if len(file_arg) == 2:
+			system("python threadsss.py %s.py %s" % (file_arg[0], case + 1) )
+		else:
+			system("python threadsss.py %s.py %s" % (file_arg[0], case + 1) )
+		
+		test_case += 1
 
 	'''
 	import requests
@@ -114,6 +161,4 @@ if "__name__" == "__main__":
 	
 	for i in q:
 		Assert(q[i],GetMyOutput(ID, i))
-	
-	
 	'''
