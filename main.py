@@ -111,9 +111,9 @@ if __name__ == "__main__":
 		print in_out[case][1]
 
 		if len(file_arg) == 2:
-			system("python threadsss.py %s.py %s" % (file_arg[0], case + 1) )
+			system("python whatchdog.py %s.py %s" % (file_arg[0], case + 1) )
 		else:
-			system("python threadsss.py %s.py %s" % (file_arg[0], case + 1) )
+			system("python whatchdog.py %s.py %s" % (file_arg[0], case + 1) )
 		
 		test_case += 1
 
